@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Cek Koordinat Saya</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Load Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+  <style>
+    #map { width: 100%; height: 80vh; margin-top: 10px; }
+    button, input { margin: 5px; padding: 5px; }
+  </style>
+</head>
+<body>
+  <h3>Koordinat Saya</h3>
+  <button onclick="getLocation()">Ambil Lokasi Saya</button>
+  <br>
+  <label>Latitude: <input type="text" id="lat" readonly></label>
+  <label>Longitude: <input type="text" id="lng" readonly></label>
+  <button onclick="copyData()">Salin</button>
+
+  <div id="map"></div>
+
+  <script>
+    let map, marker;
+
+    function initMap() {
+      // Default Jakarta
+      const defaultPos = [-6.200115, 106.816719];
+      map = L.map('map').setView(defaultPos, 13);
+
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '© OpenStreetMap'
+      }).addTo(map);
+    }
+
+    function getLocation() {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(showPosition, showError);
+      } else {
+        alert("Browser tidak mendukung geolocation.");
+      }
+    }
+
+    function showPosition(position) {
+      const lat = position.coords.latitude;
+      const lng = position.coords.longitude;
+
+      document.getElementById("lat").value = lat.toFixed(6);
+      document.getElementById("lng").value = lng.toFixed(6);
+
+      const pos = [lat, lng];
+      map.setView(pos, 16);
+
+      if (marker) {
+        marker.setLatLng(pos);
+      } else {
+        marker = L.marker(pos).addTo(map);
+      }
+    }
+
+    function showError(error) {
+      switch(error.code) {
+        case error.PERMISSION_DENIED:
+          alert("Izin lokasi ditolak.");
+          break;
+        case error.POSITION_UNAVAILABLE:
+          alert("Informasi lokasi tidak tersedia.");
+          break;
+        case error.TIMEOUT:
+          alert("Permintaan lokasi timeout.");
+          break;
+        default:
+          alert("Terjadi error lokasi.");
+      }
+    }
+
+    function copyData() {
+      const lat = document.getElementById("lat").value;
+      const lng = document.getElementById("lng").value;
+      if (lat && lng) {
+        const data = `LAT=${lat}, LNG=${lng}`;
+        navigator.clipboard.writeText(data).then(() => {
+          alert("Data disalin: " + data);
+        });
+      } else {
+        alert("Belum ada koordinat, klik 'Ambil Lokasi Saya' dulu.");
+      }
+    }
+
+    window.onload = initMap;
+  </script>
+</body>
+</html>

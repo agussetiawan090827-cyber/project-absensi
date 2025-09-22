@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Atur Area Absensi</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Load Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+  <style>
+    #map { width: 100%; height: 70vh; margin-top: 10px; }
+    .form-container { margin-bottom: 10px; }
+    input, button { margin: 5px; padding: 5px; }
+  </style>
+</head>
+<body>
+  <h3>Atur Lokasi & Radius Absensi</h3>
+  
+  <div class="form-container">
+    <label>Latitude: 
+      <input type="number" id="lat" step="0.000001" value="-6.200115">
+    </label>
+    <label>Longitude: 
+      <input type="number" id="lng" step="0.000001" value="106.816719">
+    </label>
+    <button onclick="setCoordinate()">Set Koordinat</button>
+    <br>
+    
+    <!-- Slider -->
+    <input type="range" id="radius" min="1" max="3000" step="1" value="300" 
+           oninput="updateRadius(this.value)">
+    
+    <!-- Input manual radius -->
+    <label>
+      Radius: 
+      <input type="number" id="radius-input" min="1" max="3000" step="1" value="300" 
+             oninput="updateRadiusInput(this.value)">
+      meter
+    </label>
+    
+    <span id="radius-val">300</span> meter
+  </div>
+
+  <div id="map"></div>
+  <button onclick="copyData()">Salin Data</button>
+  <button onclick="saveData()">Simpan ke Backend</button>
+
+  <script>
+    let map, marker, circle;
+    let radius = 300;
+
+    function initMap() {
+      // Lokasi default Jakarta
+      const school = [-6.200115, 106.816719];
+
+      map = L.map('map').setView(school, 16);
+
+      // Load tile map dari OpenStreetMap
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '© OpenStreetMap'
+      }).addTo(map);
+
+      marker = L.marker(school, { draggable: true }).addTo(map);
+
+      circle = L.circle(school, {
+        radius: radius,
+        color: "green",
+        fillColor: "#0f0",
+        fillOpacity: 0.3
+      }).addTo(map);
+
+      marker.on("drag", function (e) {
+        circle.setLatLng(e.target.getLatLng());
+        updateInputs(e.target.getLatLng());
+      });
+    }
+
+    function updateInputs(pos) {
+      document.getElementById("lat").value = pos.lat.toFixed(6);
+      document.getElementById("lng").value = pos.lng.toFixed(6);
+    }
+
+    function updateRadius(val) {
+      radius = parseInt(val);
+      document.getElementById("radius-val").innerText = val;
+      document.getElementById("radius-input").value = val; // sinkron ke input manual
+      circle.setRadius(radius);
+    }
+
+    function updateRadiusInput(val) {
+      radius = parseInt(val);
+      document.getElementById("radius-val").innerText = val;
+      document.getElementById("radius").value = val; // sinkron ke slider
+      circle.setRadius(radius);
+    }
+
+    function setCoordinate() {
+      const lat = parseFloat(document.getElementById("lat").value);
+      const lng = parseFloat(document.getElementById("lng").value);
+      const pos = [lat, lng];
+      marker.setLatLng(pos);
+      circle.setLatLng(pos);
+      map.setView(pos, 16);
+    }
+
+    function copyData() {
+      const pos = marker.getLatLng();
+      const data = `LAT=${pos.lat.toFixed(6)}, LNG=${pos.lng.toFixed(6)}, RADIUS=${radius}`;
+      navigator.clipboard.writeText(data).then(() => {
+        alert("Data disalin: " + data);
+      });
+    }
+
+    function saveData() {
+      const pos = marker.getLatLng();
+      const data = {
+        lat: pos.lat,
+        lon: pos.lng,
+        radius: radius
+      };
+      console.log("Data disimpan:", data);
+
+      fetch("/set_area", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+      })
+      .then(res => res.json())
+      .then(res => alert(res.message));
+    }
+
+    window.onload = initMap;
+  </script>
+</body>
+</html>
